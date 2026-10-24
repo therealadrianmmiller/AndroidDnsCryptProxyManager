@@ -41,6 +41,8 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable private fun AppUI() {
+    val binaryPath = "/system/bin/dnscrypt-proxy"
+    val configPath = "/storage/emulated/0/dnscrypt-proxy/dnscrypt-proxy.toml"
     val c = LocalContext.current
     val scope = rememberCoroutineScope()
     var theme by remember { mutableStateOf(Prefs.theme(c)) }
@@ -83,7 +85,7 @@ class MainActivity : ComponentActivity() {
                                 loadRecent()
                             }
                         }
-                        run("Restart proxy", "setprop ctl.restart ${RootShell.q(service)}")
+                        run("Restart proxy", "pkill -f $binaryPath; $binaryPath -config $configPath > /dev/null 2>&1 &"")
                     }
                 }) { Icon(Icons.Default.Refresh, "Refresh / restart") }
             })
