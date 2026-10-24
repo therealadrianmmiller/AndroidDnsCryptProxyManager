@@ -7,7 +7,6 @@ object LogParser {
         val pattern = patternRegex.find(line)?.groupValues?.get(1)?.trim()?.takeIf { it.isNotBlank() }
         val aliases = aliasRegex.findAll(line).map { it.groupValues[1].trim() }.toList()
         if (aliases.isNotEmpty()) return aliases.map { BlockedDomain(it, pattern) }
-        #val parts = line.trim().split('\\t')
         val parts: List<String> = line.trim().split("\t")
         if (parts.size >= 3) { val d = parts[2].trim(); if ('.' in d && ' ' !in d) return listOf(BlockedDomain(d, pattern)) }
         return emptyList()
