@@ -12,15 +12,15 @@ The restart action uses `setprop ctl.restart dnscrypt-proxy`. Set the Android in
 
 ## Notifications
 - Foreground service tails the log from its current end, so old entries are not notified on startup.
-- Parsed new domains are stored in app-private SQLite before notification. Clearing the log does not clear seen history.
-- Notifications have an Allow action and a five-second auto-dismiss timeout. If untouched, the domain is not allowed.
+- Parsed domains are stored in app-private SQLite: a seen table prevents duplicate notifications, and a separate recent-blocked history survives log clearing.
+- Blocked-domain notifications are not automatically removed; Android controls how long the heads-up popup appears, while the notification remains in the notification shade until dismissed. The Recent tab is a second chance to allow domains.
 - Android 13+ notification permission is requested at first launch. Disable battery optimization if Android repeatedly stops monitoring.
 
 ## Build
 Open this folder in Android Studio, sync Gradle, then Build > Build APK(s). Install the resulting debug APK and grant root access in KernelSU.
 
 ## Notes
-- Allow appends to `allowed-names.txt`; restart the proxy to apply the list.
+- Allow appends to `allowed-names.txt` and requests a restart of the configured Android init service.
 - Clearing the log truncates it and requests a service restart.
 - Purging the seen database allows previously seen domains to notify again.
 - This is source code, not a prebuilt APK.

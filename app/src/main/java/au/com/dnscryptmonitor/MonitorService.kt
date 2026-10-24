@@ -25,7 +25,10 @@ class MonitorService : Service() {
                     while (running.get()) {
                         val line = r.readLine() ?: break
                         for (item in LogParser.parse(line)) {
-                            if (item.domain.isBlank() || db.has(item.domain)) continue
+                            if (item.domain.isBlank()) continue
+                            // Keep a second-chance history even when this domain was notified before.
+                            db.recordBlocked(item.domain, item.pattern)
+                            if (db.has(item.domain)) continue
                             db.add(item.domain)
                             Notifications.blocked(this, (item.domain.lowercase().hashCode() and 0x7fffffff).coerceAtLeast(1), item.domain, item.pattern)
                         }

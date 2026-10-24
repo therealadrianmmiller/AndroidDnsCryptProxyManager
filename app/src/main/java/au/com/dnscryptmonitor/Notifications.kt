@@ -27,7 +27,7 @@ object Notifications {
         val n = NotificationCompat.Builder(c, CHANNEL).setSmallIcon(android.R.drawable.ic_secure)
             .setContentTitle("DNSCrypt blocked a domain").setContentText(domain)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body)).setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true).setTimeoutAfter(5000L).setContentIntent(oi)
+            .setAutoCancel(true).setContentIntent(oi)
             .addAction(android.R.drawable.ic_input_add, "Allow", ap).build()
         c.getSystemService(NotificationManager::class.java).notify(id, n)
     }

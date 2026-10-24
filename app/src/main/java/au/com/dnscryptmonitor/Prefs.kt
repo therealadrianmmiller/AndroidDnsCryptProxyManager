@@ -2,7 +2,7 @@ package au.com.dnscryptmonitor
 import android.content.Context
 object Prefs {
     private fun p(c: Context) = c.getSharedPreferences("dnscrypt_monitor", Context.MODE_PRIVATE)
-    fun base(c: Context) = p(c).getString("base", "/sdcard/dnscrypt-proxy")!!
+    fun base(c: Context) = p(c).getString("base", "/data/adb/dnscrypt-proxy")!!
     fun service(c: Context) = p(c).getString("service", "dnscrypt-proxy")!!
     fun theme(c: Context) = p(c).getString("theme", "system")!!
     fun setBase(c: Context, v: String) = p(c).edit().putString("base", v.trim()).apply()
