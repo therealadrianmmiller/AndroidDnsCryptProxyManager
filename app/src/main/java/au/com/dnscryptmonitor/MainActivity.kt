@@ -85,7 +85,7 @@ class MainActivity : ComponentActivity() {
                                 loadRecent()
                             }
                         }
-                        run("Restart proxy", "pkill -f $binaryPath; $binaryPath -config $configPath > /dev/null 2>&1 &"")
+                        run("Restart proxy", "pkill -f $binaryPath; $binaryPath -config $configPath > /dev/null 2>&1 &")
                     }
                 }) { Icon(Icons.Default.Refresh, "Refresh / restart") }
             })
