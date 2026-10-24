@@ -1,6 +1,8 @@
 package au.com.dnscryptmonitor
 import android.app.Service
 import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import java.io.BufferedReader
@@ -11,7 +13,12 @@ class MonitorService : Service() {
     private var tail: Process? = null
     private var worker: Thread? = null
     private lateinit var db: SeenDb
-    override fun onCreate() { super.onCreate(); Notifications.channels(this); db = SeenDb(this); startForeground(9001, Notifications.status(this)) }
+    override fun onCreate() {
+        super.onCreate(); Notifications.channels(this); db = SeenDb(this)
+        val n = Notifications.status(this)
+        // specialUse has no runtime limit and may start from BOOT_COMPLETED (dataSync can't on Android 15).
+        if (Build.VERSION.SDK_INT >= 34) startForeground(9001, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) else startForeground(9001, n)
+    }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (running.compareAndSet(false, true)) { worker = Thread({ loop() }, "dnscrypt-log-monitor").apply { isDaemon = true; start() } }
         return START_STICKY
