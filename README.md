@@ -71,14 +71,14 @@ Settings
 
 ### Requirements: 
 
-- A running dnscrypt=proxy service and setup
-- blocked and allow lists and blocked-names.log configured in the Dnscrypt Directory in app Settings
+- A running dnscrypt-proxy service and setup
+- blocked-names.txt and allowed-names.txt lists and blocked-names.log configured in the Dnscrypt Directory in app Settings
 - `blocked-names.log`
 - `allowed-names.txt`
 - `blocked-names.txt`
 - Root granted to Dnscrypt Monitor in your root manager app
 
-### Magisk Module:
+### Complimentary Magisk Module:
 
 A complete working magisk module, using my own basic setup (with basic blocked-names.txt and blank allowed-names.txt files) will be available here (link to be added) to get you started
 The Dnscrypt Manager app will not be bundled with it to keep it a separate and manageable project
