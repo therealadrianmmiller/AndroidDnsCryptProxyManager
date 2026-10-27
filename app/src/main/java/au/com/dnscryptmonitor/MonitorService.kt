@@ -18,6 +18,7 @@ class MonitorService : Service() {
         val n = Notifications.status(this)
         // specialUse has no runtime limit and may start from BOOT_COMPLETED (dataSync can't on Android 15).
         if (Build.VERSION.SDK_INT >= 34) startForeground(9001, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) else startForeground(9001, n)
+        try { BlocklistScheduler.rearm(this) } catch (_: Exception) {}
     }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (running.compareAndSet(false, true)) { worker = Thread({ loop() }, "dnscrypt-log-monitor").apply { isDaemon = true; start() } }

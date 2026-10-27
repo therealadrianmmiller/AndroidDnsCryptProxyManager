@@ -91,6 +91,9 @@ class MainActivity : ComponentActivity() {
         suspend fun restartProxy(label: String = "Restart proxy", before: String? = null) {
             run(label, ProxyControl.restartCommand(before))
         }
+        var redirectActive by remember { mutableStateOf<Boolean?>(null) }
+        suspend fun refreshRedirect() { redirectActive = withContext(Dispatchers.IO) { DnsRedirect.isActive() } }
+        LaunchedEffect(tab) { if (tab == 0) refreshRedirect() }
         // Small files are loaded whole; big ones only get a read-only preview.
         suspend fun readList(path: String): ListData = withContext(Dispatchers.IO) {
             val q = RootShell.q(path)
@@ -154,8 +157,8 @@ class MainActivity : ComponentActivity() {
             })
         }, bottomBar = {
             NavigationBar {
-                val labels = listOf("Dashboard", "Recent", "Domain lists", "Settings")
-                val icons = listOf(Icons.Default.Dashboard, Icons.Default.History, Icons.Default.List, Icons.Default.Settings)
+                val labels = listOf("Dashboard", "Recent", "Domain lists", "Blocklist", "Settings")
+                val icons = listOf(Icons.Default.Dashboard, Icons.Default.History, Icons.Default.List, Icons.Default.Build, Icons.Default.Settings)
                 labels.forEachIndexed { i, label ->
                     NavigationBarItem(
                         selected = tab == i,
@@ -189,6 +192,26 @@ class MainActivity : ComponentActivity() {
                             }
                             AppButton(buttonStyle, "Stop monitoring", Icons.Default.Stop) {
                                 c.stopService(Intent(c, MonitorService::class.java)); status = "Monitoring stopped"
+                            }
+                        }
+                        HorizontalDivider()
+                        Text("DNS protection", style = MaterialTheme.typography.titleLarge)
+                        Text(
+                            when (redirectActive) {
+                                true -> "DNS redirect is active: DNS queries go to dnscrypt-proxy."
+                                false -> "DNS redirect is paused: DNS is NOT going through dnscrypt-proxy."
+                                null -> "Checking DNS redirect…"
+                            }
+                        )
+                        ButtonGroup(buttonStyle) {
+                            if (redirectActive == false) {
+                                AppButton(buttonStyle, "Resume DNS protection", Icons.Default.PlayArrow, primary = true) {
+                                    scope.launch { run("Resume DNS protection", DnsRedirect.RESUME_CMD); refreshRedirect() }
+                                }
+                            } else {
+                                AppButton(buttonStyle, "Pause DNS protection", Icons.Default.Pause, destructive = true) {
+                                    scope.launch { run("Pause DNS protection", DnsRedirect.PAUSE_CMD); refreshRedirect() }
+                                }
                             }
                         }
                         HorizontalDivider()
@@ -339,6 +362,7 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
+                    3 -> BuildBlocklistTab(buttonStyle) { scope.launch { restartProxy() } }
                     else -> {
                         Text("Settings", style = MaterialTheme.typography.headlineSmall)
                         OutlinedTextField(
@@ -380,7 +404,7 @@ class MainActivity : ComponentActivity() {
 /** Lays buttons out for the chosen style: wrapping row for "compact", stacked column otherwise. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ButtonGroup(style: String, content: @Composable () -> Unit) {
+internal fun ButtonGroup(style: String, content: @Composable () -> Unit) {
     if (style == "compact") {
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -398,7 +422,7 @@ private fun ButtonGroup(style: String, content: @Composable () -> Unit) {
  *  - "classic": the original full-width pill buttons
  */
 @Composable
-private fun AppButton(
+internal fun AppButton(
     style: String,
     label: String,
     icon: ImageVector? = null,

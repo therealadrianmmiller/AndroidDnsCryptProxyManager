@@ -7,6 +7,7 @@ import androidx.core.content.ContextCompat
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
+        try { BlocklistScheduler.rearm(context) } catch (_: Exception) {}
         try {
             ContextCompat.startForegroundService(context, Intent(context, MonitorService::class.java))
         } catch (e: Exception) {
