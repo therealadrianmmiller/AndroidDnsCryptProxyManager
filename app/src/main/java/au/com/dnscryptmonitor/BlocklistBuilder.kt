@@ -44,7 +44,7 @@ object BlocklistBuilder {
     private fun toKey(domain: String) = domain.split('.').reversed().joinToString(".") + "."
     private fun toDomain(key: String) = key.removeSuffix(".").split('.').reversed().joinToString(".")
 
-    private fun sh(cmd: String, timeoutMs: Int = 20000) = RootShell.run(cmd, timeoutMs)
+    private fun sh(cmd: String, timeoutMs: Long = 20000L) = RootShell.run(cmd, timeoutMs)
 
     private fun downloadTo(url: String, dest: String, timeoutMs: Int) {
         val conn = BlocklistSources.open(url, timeoutMs)
