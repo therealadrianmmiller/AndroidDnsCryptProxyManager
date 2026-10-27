@@ -12,7 +12,7 @@ import java.io.OutputStreamWriter
  * the sort is done by the system `sort` as root. Any failure restores the backup.
  */
 object BlocklistBuilder {
-    private const val TMP = "/data/local/tmp/dnscrypt-build"
+    private const val PREFERRED_TMP = "/data/local/tmp/dnscrypt-build"
 
     class Result(val ok: Boolean, val summary: String)
 
@@ -45,6 +45,24 @@ object BlocklistBuilder {
     private fun toDomain(key: String) = key.removeSuffix(".").split('.').reversed().joinToString(".")
 
     private fun sh(cmd: String, timeoutMs: Long = 20000L) = RootShell.run(cmd, timeoutMs)
+
+    /**
+     * First temp folder root can create and write to: /data/local/tmp is preferred, the app's own cache dir is the
+     * fallback. Returns (path, "") on success or (null, what went wrong) so the real error is shown to the user.
+     */
+    private fun pickTmp(c: Context, log: (String) -> Unit): Pair<String?, String> {
+        val problems = StringBuilder()
+        for (dir in listOf(PREFERRED_TMP, c.cacheDir.absolutePath + "/dnscrypt-build")) {
+            val q = RootShell.q(dir)
+            val r = sh("rm -rf $q; mkdir -p $q && touch $q/.w && rm -f $q/.w")
+            if (r.code == 0) {
+                if (dir != PREFERRED_TMP) log("Using $dir (/data/local/tmp was not usable)")
+                return Pair(dir, "")
+            }
+            problems.append("$dir (code ${r.code}): ${r.output.trim()}\n")
+        }
+        return Pair(null, problems.toString().trim())
+    }
 
     private fun downloadTo(url: String, dest: String, timeoutMs: Int) {
         val conn = BlocklistSources.open(url, timeoutMs)
@@ -79,20 +97,23 @@ object BlocklistBuilder {
             val r = sh("mv -f $qDest $qBak")
             if (r.code != 0) return Result(false, "Backup failed: ${r.output}")
         }
+        var tmp = ""
         fun abort(msg: String): Result {
             if (hadFile) sh("rm -f $qDest; mv -f $qBak $qDest")
-            sh("rm -rf $TMP")
+            if (tmp.isNotEmpty()) sh("rm -rf ${RootShell.q(tmp)}")
             return Result(false, "$msg Previous list restored.")
         }
 
         try {
-            if (sh("rm -rf $TMP; mkdir -p $TMP").code != 0) return abort("Could not create $TMP.")
+            val (picked, why) = pickTmp(c, log)
+            if (picked == null) return abort("Could not create a temporary folder. $why")
+            tmp = picked
 
             val files = ArrayList<String>()
             for ((i, url) in urls.withIndex()) {
                 val name = url.substringAfterLast('/')
                 log("Downloading ${i + 1}/${urls.size}: $name")
-                val path = "$TMP/src_$i.txt"
+                val path = "$tmp/src_$i.txt"
                 try {
                     downloadTo(url, path, timeoutMs)
                     files.add(path)
@@ -104,7 +125,7 @@ object BlocklistBuilder {
             if (files.isEmpty()) return abort("No source could be downloaded.")
 
             log("Parsing ${files.size} file(s)")
-            val keys = "$TMP/keys.txt"
+            val keys = "$tmp/keys.txt"
             var parsed = 0L
             val kp = ProcessBuilder("su", "-c", "cat > ${RootShell.q(keys)}").redirectErrorStream(true).start()
             val kw = BufferedWriter(OutputStreamWriter(kp.outputStream, Charsets.UTF_8), 1 shl 16)
@@ -124,13 +145,13 @@ object BlocklistBuilder {
             if (parsed == 0L) return abort("No domains could be parsed from the downloaded files.")
 
             log("Sorting $parsed entries")
-            val sorted = "$TMP/sorted.txt"
+            val sorted = "$tmp/sorted.txt"
             val s = sh("LC_ALL=C sort -u ${RootShell.q(keys)} -o ${RootShell.q(sorted)}", 600000)
             if (s.code != 0) return abort("Sort failed: ${s.output}.")
             sh("rm -f ${RootShell.q(keys)}")
 
             log(if (collapse) "Removing duplicates and covered subdomains" else "Writing list")
-            val result = "$TMP/result.txt"
+            val result = "$tmp/result.txt"
             var kept = 0L
             val wp = ProcessBuilder("su", "-c", "cat > ${RootShell.q(result)}").redirectErrorStream(true).start()
             val ww = BufferedWriter(OutputStreamWriter(wp.outputStream, Charsets.UTF_8), 1 shl 16)
@@ -155,7 +176,7 @@ object BlocklistBuilder {
             val w = sh("cat ${RootShell.q(result)} > $qDest", 120000)
             if (w.code != 0 || sh("[ -s $qDest ]").code != 0) return abort("Could not write $dest: ${w.output}.")
 
-            sh("rm -rf $TMP")
+            sh("rm -rf ${RootShell.q(tmp)}")
             val dupes = parsed - kept
             return Result(
                 true,
