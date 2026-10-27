@@ -200,7 +200,7 @@ class MainActivity : ComponentActivity() {
                             when (redirectActive) {
                                 true -> "DNS redirect is active: DNS queries go to dnscrypt-proxy."
                                 false -> "DNS redirect is paused: DNS is NOT going through dnscrypt-proxy."
-                                null -> "Checking DNS redirect…"
+                                null -> "DNS redirect state unknown (still checking, or root access is unavailable)."
                             }
                         )
                         ButtonGroup(buttonStyle) {

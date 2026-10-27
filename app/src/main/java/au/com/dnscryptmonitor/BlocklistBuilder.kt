@@ -91,6 +91,16 @@ object BlocklistBuilder {
         val qDest = RootShell.q(dest)
         val qBak = RootShell.q(bak)
 
+        log("Checking root access")
+        val idr = sh("id")
+        if (idr.code != 0 || !idr.output.contains("uid=0")) {
+            return Result(
+                false,
+                "Root access is not available (code ${idr.code}): ${idr.output.trim()}. " +
+                    "In the KernelSU manager, open Superuser and allow DNSCrypt Monitor, then try again. Nothing was changed."
+            )
+        }
+
         log("Backing up current blocked-names.txt")
         val hadFile = sh("[ -f $qDest ]").code == 0
         if (hadFile) {

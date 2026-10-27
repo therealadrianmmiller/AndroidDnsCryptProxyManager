@@ -26,5 +26,10 @@ object DnsRedirect {
     /** Adds each rule only if it is missing. */
     val RESUME_CMD = "( ${has("tcp")} || ${add("tcp")} ) && ( ${has("udp")} || ${add("udp")} )"
 
-    fun isActive(): Boolean = RootShell.run(STATUS_CMD, 20000).code == 0
+    /** true = redirect present, false = absent, null = couldn't tell (no root, no iptables). */
+    fun isActive(): Boolean? = when (RootShell.run(STATUS_CMD, 20000).code) {
+        0 -> true
+        1 -> false
+        else -> null
+    }
 }
