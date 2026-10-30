@@ -39,6 +39,9 @@ fun BuildBlocklistTab(buttonStyle: String, onRestartProxy: () -> Unit) {
     var restartAfter by remember { mutableStateOf(BlocklistPrefs.restartAfter(c)) }
     var showAdd by remember { mutableStateOf(false) }
     var addText by remember { mutableStateOf("") }
+    var showLocal by remember { mutableStateOf(false) }
+    var localText by remember { mutableStateOf("") }
+    var localCount by remember { mutableStateOf<Int?>(null) }   // null = loading, -1 = unreadable
     var busy by remember { mutableStateOf("") }
     val st by BlocklistStatus.state.collectAsState()
 
@@ -81,7 +84,20 @@ fun BuildBlocklistTab(buttonStyle: String, onRestartProxy: () -> Unit) {
         busy = ""
     }
 
+    suspend fun refreshLocalCount() {
+        val text = withContext(Dispatchers.IO) { LocalAdditions.read(c) }
+        localCount = text?.let { LocalAdditions.countDomains(it) } ?: -1
+    }
+
+    suspend fun openLocal() {
+        val text = withContext(Dispatchers.IO) { LocalAdditions.read(c) }
+        if (text == null) { toast("Root access unavailable: can't read ${LocalAdditions.FILE_NAME}"); return }
+        localText = if (text.isBlank()) LocalAdditions.TEMPLATE else text
+        showLocal = true
+    }
+
     LaunchedEffect(Unit) { if (sources.none { !it.custom }) fetchList() }
+    LaunchedEffect(Unit) { refreshLocalCount() }
 
     if (st.offerRestart) {
         AlertDialog(
@@ -99,6 +115,35 @@ fun BuildBlocklistTab(buttonStyle: String, onRestartProxy: () -> Unit) {
                     BlocklistStatus.state.value = BlocklistStatus.state.value.copy(offerRestart = false)
                 }) { Text("Later") }
             }
+        )
+    }
+
+    if (showLocal) {
+        AlertDialog(
+            onDismissRequest = { showLocal = false },
+            title = { Text("Local additions") },
+            text = {
+                OutlinedTextField(
+                    localText, { localText = it },
+                    modifier = Modifier.fillMaxWidth().height(320.dp),
+                    label = { Text(LocalAdditions.FILE_NAME) }
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    scope.launch {
+                        val r = withContext(Dispatchers.IO) { LocalAdditions.write(c, localText) }
+                        if (r.code == 0) {
+                            showLocal = false
+                            refreshLocalCount()
+                            toast("Saved ${LocalAdditions.FILE_NAME}")
+                        } else {
+                            toast("Save failed (${r.code}): ${r.output}")
+                        }
+                    }
+                }) { Text("Save") }
+            },
+            dismissButton = { TextButton(onClick = { showLocal = false }) { Text("Cancel") } }
         )
     }
 
@@ -174,6 +219,20 @@ fun BuildBlocklistTab(buttonStyle: String, onRestartProxy: () -> Unit) {
             Modifier.padding(start = 12.dp), style = MaterialTheme.typography.bodyMedium
         )
     }
+
+    HorizontalDivider()
+    Text("Local additions", style = MaterialTheme.typography.titleMedium)
+    Text("Your own domains and dnscrypt-proxy patterns (like ads.*), one per line. ${LocalAdditions.FILE_NAME} is always merged into the built list.")
+    Text(
+        when (localCount) {
+            null -> "Reading ${LocalAdditions.FILE_NAME}…"
+            -1 -> "Could not read ${LocalAdditions.FILE_NAME} (is root allowed?)"
+            0 -> "No local entries yet"
+            else -> "$localCount local entries"
+        },
+        style = MaterialTheme.typography.bodySmall
+    )
+    AppButton(buttonStyle, "Edit local additions", Icons.Default.Edit) { scope.launch { openLocal() } }
 
     HorizontalDivider()
     Text("Build options", style = MaterialTheme.typography.titleMedium)

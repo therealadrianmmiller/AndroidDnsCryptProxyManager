@@ -29,6 +29,16 @@ object BlocklistBuilder {
         Regex("""^address=/([a-z0-9][a-z0-9.-]*[.][a-z]{2,})/.""")
     )
 
+    // dnscrypt-proxy name patterns (not full regex): * ? [] wildcards, or =exact.name
+    private val rxPattern = Regex("""^=?[a-z0-9._*?\[\]-]+$""")
+
+    /** A local-additions line that is a dnscrypt-proxy pattern (e.g. "ads.*"), cleaned up, or null. */
+    private fun localPattern(raw: String): String? {
+        val t = rxInline.replace(raw.trim().lowercase(), "").trim()
+        val hasWildcard = t.startsWith("=") || t.any { it == '*' || it == '?' || it == '[' }
+        return if (rxPattern.matches(t) && hasWildcard && t.any { it.isLetterOrDigit() }) t else null
+    }
+
     fun parseLine(raw: String): String? {
         val lower = raw.trim().lowercase()
         if (rxComment.containsMatchIn(lower)) return null
@@ -150,6 +160,31 @@ object BlocklistBuilder {
                 }
                 rp.waitFor()
             }
+            // Local additions are always included, whatever happened with the downloads.
+            var localParsed = 0L
+            var localSkipped = 0L
+            val localPatterns = java.util.TreeSet<String>()
+            val localPath = LocalAdditions.path(c)
+            if (sh("[ -f ${RootShell.q(localPath)} ]").code == 0) {
+                val lp = ProcessBuilder("su", "-c", "cat ${RootShell.q(localPath)}").redirectErrorStream(true).start()
+                lp.inputStream.bufferedReader(Charsets.UTF_8).useLines { lines ->
+                    for (line in lines) {
+                        val t = line.trim()
+                        if (t.isEmpty() || t.startsWith("#")) continue
+                        val d = parseLine(line)
+                        if (d != null) {
+                            kw.write(toKey(d)); kw.write("\n")
+                            parsed++; localParsed++
+                        } else {
+                            // Patterns like "ads.*" can't be sorted/merged by domain, so they are kept as written.
+                            val pat = localPattern(line)
+                            if (pat != null) localPatterns.add(pat) else localSkipped++
+                        }
+                    }
+                }
+                lp.waitFor()
+                log("Local additions: $localParsed domain(s), ${localPatterns.size} pattern(s)" + if (localSkipped > 0) ", $localSkipped line(s) not recognised and skipped" else "")
+            }
             kw.close()
             kp.waitFor()
             if (parsed == 0L) return abort("No domains could be parsed from the downloaded files.")
@@ -166,6 +201,7 @@ object BlocklistBuilder {
             val wp = ProcessBuilder("su", "-c", "cat > ${RootShell.q(result)}").redirectErrorStream(true).start()
             val ww = BufferedWriter(OutputStreamWriter(wp.outputStream, Charsets.UTF_8), 1 shl 16)
             val sp = ProcessBuilder("su", "-c", "cat ${RootShell.q(sorted)}").redirectErrorStream(true).start()
+            for (pt in localPatterns) { ww.write(pt); ww.write("\n") }
             var last: String? = null
             sp.inputStream.bufferedReader(Charsets.UTF_8).useLines { lines ->
                 for (key in lines) {
@@ -180,7 +216,7 @@ object BlocklistBuilder {
             sp.waitFor()
             ww.close()
             wp.waitFor()
-            if (kept == 0L) return abort("Result was empty.")
+            if (kept == 0L && localPatterns.isEmpty()) return abort("Result was empty.")
 
             log("Installing new blocked-names.txt")
             val w = sh("cat ${RootShell.q(result)} > $qDest", 120000)
@@ -190,7 +226,7 @@ object BlocklistBuilder {
             val dupes = parsed - kept
             return Result(
                 true,
-                "Built $kept domains from ${files.size}/${urls.size} sources ($parsed parsed, $dupes duplicates/covered removed)." +
+                "Built $kept domains from ${files.size}/${urls.size} sources plus $localParsed local domain(s) and ${localPatterns.size} pattern(s) ($parsed parsed, $dupes duplicates/covered removed)." +
                     if (hadFile) " Old list saved as blocked-names.bak." else ""
             )
         } catch (e: Exception) {
