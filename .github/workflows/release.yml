@@ -1,3 +1,8 @@
+- uses: gradle/actions/setup-gradle@v4
+    with:
+        gradle-version: 8.13
+
+
 name: Release APK
 on:
   push:
@@ -28,7 +33,7 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew assembleRelease
+        run: gradle assembleRelease
 
       - name: Rename APK
         run: cp app/build/outputs/apk/release/app-release.apk dnscryptmonitor.apk
