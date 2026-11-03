@@ -20,28 +20,30 @@ Note: the path is changeable in Settings
 ![screenshot](media/dnscrypt-manager-shade3_result.png)
 
 - Monitors the blocked-names.log file and 
- - parses and displays the blocked domain as a notification with Allow action (and also populates the domains in the Recents tab of app in case you dismiss or miss the notification)
-  - Foreground service tails the log from its current end, so old entries are not notified on startup.
-  - Parsed domains are stored in app-private SQLite: a seen table prevents duplicate notifications, and a separate recent-blocked history survives log clearing.
-  - Blocked-domain notifications are not automatically removed; Android controls how long the heads-up popup appears, while the notification remains in the notification shade until dismissed. The Recent tab is a second chance to allow domains.
-  - Android 13+ notification permission is requested at first launch. Disable battery optimization if Android repeatedly stops monitoring.
- - allow action writes the domain to allowed-names.txt and restarts dnscrypt-proxy cleanly
-     
+  - parses and displays the blocked domain as a notification with Allow action (and also populates the domains in the Recents tab of app in case you dismiss or miss the notification)
+  - service tails the log from its current end, so old entries are not notified on startup.
+  - parsed domains are stored in a database: a seen table prevents duplicate notifications, and a separate recent-blocked history survives log clearing.
+  - blocked-domain notifications are not automatically removed; Android controls how long the heads-up popup appears, while the notification remains in the notification shade until dismissed. The Recent tab is a second chance to allow domains.
+  - allow action writes the domain to allowed-names.txt and restarts dnscrypt-proxy cleanly
+
+Note: Android 13+ notification permission is requested at first launch (if not installed by the magisk module). Disable battery optimization if Android repeatedly stops monitoring..in my testing this has been unnecessary
  
+
 ### App Tabs:
 
-Dashboard
+**Dashboard**
 
 ![screenshot](media/dnscrypt-manager-dashboard_result.png)
 
 - Start/Resume monitoring (Monitoring begins after boot)
 - Stop Monitoring
 - Restart dnscrypt-proxy
+- Pause dnscrypt-proxy (useful when you really need to access a site and dont want to deal with finding the blocked domains) - dnscrypt-proxy remains running, but traffic is routed via normal DNS, and of course returned via dnscrypt-proxy when resumed.
 - Clear blocked-names.log & Restart
 - Purge seen & recent db & restart
 - Refresh recent log/database count - show at bottom of screen after pressing
 
-Recent
+**Recent**
 
 ![screenshot](media/dnscrypt-manager-recents_result.png)
 
@@ -50,7 +52,7 @@ Recent
 - Refresh the list of blocked domains
 - Restart dnscrypt-proxy
 
-Domain Lists
+**Domain Lists**
 
 ![screenshot](media/dnscrypt-manager-lists_result.png)
 ![screenshot](media/dnscrypt-manager-lists2_result.png)
@@ -59,7 +61,17 @@ Domain Lists
 - Blocked Domains, shows the first 300 lines of blocked-names.txt (theres a hard filesize limit on text controls, and my personal blocked-names.txt file is 35Mb). Beyond 300 lines, you can search for, and remove domains
 - Reload, reloads allowed and Blocked lists
 
-Settings
+**Blocklist**
+
+![screenshot](media/dnscrypt-manager-blocklist1_result.png)![screenshot](media/dnscrypt-manager-blocklist2_result.png)![screenshot](media/dnscrypt-manager-blocklist3_result.png)
+
+- List of curated common blocklist sources (can check sizes of lists and total size before building - note: not all sources will report their filesize)
+- Ability to add your own blocklist sources
+- Ability to add your won blocked domains via local-additions
+- Build blocklist
+- Schedule build of blocklist
+
+**Settings**
 
 ![screenshot](media/dsncrypt-manager-settings_result.png)
 
@@ -78,7 +90,10 @@ Settings
 - `blocked-names.txt`
 - Root granted to Dnscrypt Monitor in your root manager app
 
-### Complimentary Magisk Module:
+
+### Magisk Module:
+
+A full dnscrypt-proxy module including the Dnscrypt Manager app is available here:  https://github.com/therealadrianmmiller/AndroidDnsCryptProxyModule
 
 A complete working magisk module, using my own basic setup (with basic blocked-names.txt and blank allowed-names.txt files) will be available here (link to be added) to get you started
 The Dnscrypt Manager app will not be bundled with it to keep it a separate and manageable project
