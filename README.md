@@ -94,6 +94,3 @@ Note: Android 13+ notification permission is requested at first launch (if not i
 ### Magisk Module:
 
 A full dnscrypt-proxy module including the Dnscrypt Manager app is available here:  https://github.com/therealadrianmmiller/AndroidDnsCryptProxyModule
-
-A complete working magisk module, using my own basic setup (with basic blocked-names.txt and blank allowed-names.txt files) will be available here (link to be added) to get you started
-The Dnscrypt Manager app will not be bundled with it to keep it a separate and manageable project
