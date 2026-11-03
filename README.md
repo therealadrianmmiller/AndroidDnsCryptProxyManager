@@ -67,7 +67,7 @@ Note: Android 13+ notification permission is requested at first launch (if not i
 
 - List of curated common blocklist sources (can check sizes of lists and total size before building - note: not all sources will report their filesize)
 - Ability to add your own blocklist sources
-- Ability to add your won blocked domains via local-additions
+- Ability to add your own blocked domains via local-additions
 - Build blocklist
 - Schedule build of blocklist
 
