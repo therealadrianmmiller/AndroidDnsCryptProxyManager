@@ -11,6 +11,13 @@ android {
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
 
+    dependenciesInfo {
+        // Disables dependency metadata when building APKs (for IzzyOnDroid/F-Droid)
+        includeInApk = false
+        // Disables dependency metadata when building Android App Bundles (for Google Play)
+        includeInBundle = false
+    }
+
     signingConfigs {
         create("release") {
             val ksPath = System.getenv("KEYSTORE_PATH")
